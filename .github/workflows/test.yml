@@ -1,28 +1,47 @@
-name: Run Tests
-
-on:
-  push:
-    branches:
-      - main
-  pull_request:
-    branches:
-      - main
+orbs:
+  cypress: cypress-io/cypress@3.3.1
 
 jobs:
-  test:
-    runs-on: ubuntu-latest
-
+  start-server:
+    docker:
+      - image: cypress/base:latest
     steps:
-    - name: Checkout code
-      uses: actions/checkout@v3
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm install
+      - run:
+          name: Start the server
+          command: npm start &
+      - run:
+          name: Wait for server to be ready
+          command: npx wait-on http://localhost:3001
+      - run:
+          name: Build the app
+          command: npm run build
 
-    - name: Set up Node.js
-      uses: actions/setup-node@v3
-      with:
-        node-version: 18
-
-    - name: Install dependencies
-      run: npm install
-
-    - name: Run tests
-      run: npm test
+workflows:
+  run-tests-and-deploy-to-staging-hold-then-production:
+    jobs:
+      - start-server
+      - cypress/run:
+          name: run-component-tests
+          cypress-command: npx cypress run --component
+          requires:
+            - start-server
+      - deploy-to-render-staging:
+          requires:
+            - run-component-tests
+          filters:
+            branches:
+              only: main
+      - hold:
+          type: approval
+          requires:
+            - deploy-to-render-staging
+      - deploy-to-render-production:
+          requires:
+            - hold
+          filters:
+            branches:
+              only: main
