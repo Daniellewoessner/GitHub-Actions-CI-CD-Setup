@@ -1,18 +1,20 @@
+version: 2.1
+
 orbs:
   cypress: cypress-io/cypress@3.3.1
 
 jobs:
   start-server:
-        docker:
-          - image: cypress/base:latest
-        steps:
-          - checkout
-          - run:
-              name: Install dependencies
-              command: npm install
-          - run:
-              name: Build the app
-              command: npm run build
+    docker:
+      - image: cypress/base:latest
+    steps:
+      - checkout
+      - run:
+          name: Install dependencies
+          command: npm install
+      - run:
+          name: Build the app
+          command: npm run build
   deploy-to-render-staging:
     docker:
       - image: cimg/base:current
@@ -36,10 +38,15 @@ workflows:
   run-tests-and-deploy-to-staging-hold-then-production:
     jobs:
       - start-server
-          # Make sure to add MONGODB_URI to ENVIRONMENT VARIABLES in CircleCI so that the tests can connect to the database
+      # Make sure to add MONGODB_URI to ENVIRONMENT VARIABLES in CircleCI so that the tests can connect to the database
       - cypress/run:
           name: run-component-tests
+          requires:
+            - start-server  # This ensures the server is running before tests start
           cypress-command: npx cypress run --component
+          # Add additional configuration if needed
+          # install-command: npm ci
+          # env variables can be added here as well
       - deploy-to-render-staging:
           requires:
             - run-component-tests
