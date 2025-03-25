@@ -1,0 +1,62 @@
+name: Test and Deploy
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  start-server:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Build the app
+        run: npm run build
+
+      - name: Start the server
+        run: npm start &
+      
+      - name: Wait for server to be ready
+        run: npx wait-on http://localhost:3001
+
+  run-tests:
+    runs-on: ubuntu-latest
+    needs: start-server
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 18
+
+      - name: Run Cypress tests
+        run: npx cypress run --component
+
+  deploy-to-render-staging:
+    runs-on: ubuntu-latest
+    needs: run-tests
+    steps:
+      - name: Deploy to Render Staging
+        run: curl ${{ secrets.RENDER_STAGING_DEPLOYHOOK }}
+
+  deploy-to-render-production:
+    runs-on: ubuntu-latest
+    needs: deploy-to-render-staging
+    steps:
+      - name: Deploy to Render Production
+        run: curl ${{ secrets.RENDER_PRODUCTION_DEPLOYHOOK }}
