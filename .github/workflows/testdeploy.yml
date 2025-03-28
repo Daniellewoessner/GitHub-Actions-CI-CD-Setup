@@ -6,7 +6,6 @@ on:
   pull_request:
     branches:
       - main
-
 jobs:
   test:
     strategy:
@@ -29,9 +28,9 @@ jobs:
         run: npm run build
       
       - name: Start the server
-        env:
-          MONGO_URI: ${{ secrets.MONGO_URI }}
-        run: NODE_ENV=production npm start > server.log 2>&1 &
+        run: |
+          export MONGODB_URI=${{ secrets.MONGODB_URI }}
+          NODE_ENV=production npm start > server.log 2>&1 &
       
       - name: Server status check
         run: |
@@ -44,6 +43,8 @@ jobs:
       
       - name: Run Cypress tests
         run: npx cypress run --component
+        env:
+          MONGODB_URI: ${{ secrets.MONGODB_URI }}
 
   deploy-to-render-staging:
     runs-on: ubuntu-latest
@@ -51,7 +52,7 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to Render Staging
-        run: curl ${{ secrets.RENDER_STAGING_DEPLOYHOOK }}
+        run: curl "${{ secrets.RENDER_STAGING_DEPLOYHOOK }}"
 
   deploy-to-render-production:
     runs-on: ubuntu-latest
@@ -59,4 +60,4 @@ jobs:
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
     steps:
       - name: Deploy to Render Production
-        run: curl ${{ secrets.RENDER_PRODUCTION_DEPLOYHOOK }}
+        run: curl "${{ secrets.RENDER_PRODUCTION_DEPLOYHOOK }}"
