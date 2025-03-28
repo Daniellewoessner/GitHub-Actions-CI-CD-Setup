@@ -15,18 +15,30 @@ jobs:
     steps:
       - name: Checkout code
         uses: actions/checkout@v3
+      
       - name: Set up Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
+      
       - name: Install dependencies
         run: npm install
+      
       - name: Build the app
         run: npm run build
+      
       - name: Start the server
-        run: npm start &
+        run: NODE_ENV=production npm start > server.log 2>&1 &
+      
+      - name: Server status check
+        run: |
+          sleep 5
+          ps aux | grep node
+          cat server.log
+          
       - name: Wait for server to be ready
-        run: npx wait-on http://localhost:3001
+        run: npx wait-on --timeout 60000 http://localhost:3001 || (cat server.log && exit 1)
+      
       - name: Run Cypress tests
         run: npx cypress run --component
 
