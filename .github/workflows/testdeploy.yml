@@ -6,6 +6,7 @@ on:
   pull_request:
     branches:
       - main
+
 jobs:
   test:
     strategy:
@@ -28,6 +29,8 @@ jobs:
         run: npm run build
       
       - name: Start the server
+        env:
+          MONGO_URI: ${{ secrets.MONGO_URI }}
         run: NODE_ENV=production npm start > server.log 2>&1 &
       
       - name: Server status check
